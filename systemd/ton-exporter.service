@@ -1,0 +1,15 @@
+[Unit]
+Description=TON Prometheus exporter
+Documentation=https://github.com/troman29/ton-exporter
+
+[Service]
+Restart=on-failure
+User=prometheus
+EnvironmentFile=/etc/default/ton-exporter
+WorkingDirectory=/home/prometheus/ton-exporter
+ExecStart=/home/prometheus/.local/bin/poetry run python3 ton-exporter.py
+TimeoutStopSec=20s
+SendSIGKILL=no
+
+[Install]
+WantedBy=multi-user.target

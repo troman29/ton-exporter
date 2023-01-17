@@ -2,7 +2,7 @@
 import asyncio
 import os
 import traceback
-from datetime import datetime
+from datetime import datetime as dt
 
 import aiohttp
 from prometheus_client import (
@@ -56,11 +56,18 @@ async def collect_metrics():
                     response.raise_for_status()
                     txs = map(parse_raw_tx, (await response.json())['result'])
                     tx = next((x for x in txs if abs(x['amount']) > BIG_TX_AMOUNT), None)
-                    delta_s = (
-                        datetime.utcnow() - datetime.fromtimestamp(tx['timestamp'])
-                    ).seconds if tx else 259200  # 3 days
+
+                    delta_s = int((
+                        dt.utcnow() - dt.utcfromtimestamp(tx['timestamp'])
+                    ).total_seconds()) if tx else 259200  # 3 days
                     TIME_SINCE.labels(address, name).set(delta_s)
-                    print(f'{name}:', tx, delta_s)
+
+                    print(
+                        f'{name}:',
+                        tx and tx['timestamp'],
+                        tx and dt.utcfromtimestamp(tx['timestamp']),
+                        delta_s,
+                    )
             except Exception:
                 traceback.print_exc()
             await asyncio.sleep(0.2)

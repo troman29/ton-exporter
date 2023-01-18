@@ -8,15 +8,15 @@ curl -sSL https://install.python-poetry.org | python3 -
 # Установим зависимости (в проекте)
 poetry install
 
-# Добавим адреса для мониторинга
-export EXPORTER_ADDRESSES="<name1>:<address1>,<name2>:<address2>"
-# Пример
-export EXPORTER_ADDRESSES="elector:Ef8zMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM0vF"
+# Добавим переменные окружения
+export BALANCE_ADDRESSES="<name1>:<address1>,<name2>:<address2>"
+export POOL_ADDRESSES="<name1>:<address1>"
+export TON_X_API_KEY="<ключ из https://t.me/tonapibot>"
 
 # Запустим сервис
 poetry run python3 ton-exporter.py
 
-# Открываем в браузере http://localhost:9150 и видим балансы адресов :)
+# Открываем в браузере http://localhost:9150 и видим данные :)
 ```
 
 ### Установка на linux сервер
@@ -39,7 +39,7 @@ sudo nano /etc/systemd/system/ton-exporter.service
 sudo systemctl daemon-reload
 
 sudo nano /etc/default/ton-exporter
-# Вставьте переменные окружения (EXPORTER_ADDRESSES="<ваши адреса>")
+# Вставьте ваши переменные окружения
 
 sudo systemctl enable ton-exporter
 sudo systemctl start ton-exporter

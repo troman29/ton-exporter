@@ -18,7 +18,7 @@ HTTP_PORT = 9150
 INTERVAL = 30
 
 BALANCE_ADDRESSES = dict([x.split(':') for x in os.getenv('BALANCE_ADDRESSES').split(',')])
-POOL_ADDRESSES = dict([x.split(':') for x in os.getenv('POOL_ADDRESSES').split(',')])
+TRANSACTION_ADDRESSES = dict([x.split(':') for x in os.getenv('TRANSACTION_ADDRESSES').split(',')])
 API_BASE_URL = 'https://toncenter.com/api/v2'
 X_API_KEY = os.getenv('TON_X_API_KEY')
 BIG_TX_AMOUNT = 300000
@@ -47,7 +47,7 @@ async def collect_metrics():
                 traceback.print_exc()
             await asyncio.sleep(0.2)
 
-        for name, address in POOL_ADDRESSES.items():
+        for name, address in TRANSACTION_ADDRESSES.items():
             try:
                 async with session.get(
                     f'{API_BASE_URL}/getTransactions?address={address}&limit=300&archival=true',

@@ -10,7 +10,7 @@ poetry install
 
 # Добавим переменные окружения
 export BALANCE_ADDRESSES="<name1>:<address1>,<name2>:<address2>"
-export POOL_ADDRESSES="<name1>:<address1>"
+export TRANSACTION_ADDRESSES="<name1>:<address1>"
 export TON_X_API_KEY="<ключ из https://t.me/tonapibot>"
 
 # Запустим сервис

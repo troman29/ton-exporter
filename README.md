@@ -9,8 +9,8 @@ curl -sSL https://install.python-poetry.org | python3 -
 poetry install
 
 # Добавим переменные окружения
-export BALANCE_ADDRESSES="<name1>:<address1>,<name2>:<address2>"
-export TRANSACTION_ADDRESSES="<name1>:<address1>"
+export VALIDATOR_ADDRESSES="<name1>:<address1>"
+export POOL_ADDRESSES="<name1>:<address1>,<name2>:<address2>"
 export TON_X_API_KEY="<ключ из https://t.me/tonapibot>"
 
 # Запустим сервис

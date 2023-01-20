@@ -30,6 +30,7 @@ REGISTRY.unregister(PROCESS_COLLECTOR)
 BALANCE = Gauge('address_balance', 'The balance of the address in the TON blockchain', ['address', 'name'])
 TIME_SINCE = Gauge('time_since_last_big_tx', 'Time since the last big transaction', ['address', 'name'])
 POOL_STATUS = Gauge('pool_state', 'Pool status (0 - inactive, 1 - pending, 2 - active)', ['address', 'name'])
+DEPOSIT = Gauge('pool_deposit', 'Total deposit of nominators', ['address', 'name'])
 
 
 async def main():
@@ -79,8 +80,12 @@ async def collect_pool(session, name, address):
             headers={'X-Api-Key': X_API_KEY},
         ) as response:
             response.raise_for_status()
-            state = int((await response.json())['result']['stack'][0][1], base=16)
+            stack = (await response.json())['result']['stack']
+            state = int(stack[0][1], base=16)
+            deposit = round(int(stack[2][1], base=16) / (10 ** 9))
+
             POOL_STATUS.labels(address, name).set(state)
+            DEPOSIT.labels(address, name).set(deposit)
 
         print(
             f'{name}:',
@@ -88,6 +93,7 @@ async def collect_pool(session, name, address):
             tx and dt.utcfromtimestamp(tx['timestamp']),
             delta_s,
             state,
+            deposit,
         )
     except Exception:
         traceback.print_exc()

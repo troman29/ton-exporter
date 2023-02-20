@@ -63,7 +63,7 @@ async def collect_validator(session, name, address):
 async def collect_pool(session, name, address):
     try:
         async with session.get(
-            f'{API_BASE_URL}/getTransactions?address={address}&limit=300&archival=true',
+            f'{API_BASE_URL}/getTransactions?address={address}&limit=100&archival=true',
             headers={'X-Api-Key': X_API_KEY},
         ) as response:
             response.raise_for_status()

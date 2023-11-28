@@ -1,18 +1,22 @@
+wallets:
+  - name: wallet-1
+    address: <address>
+
 validators:
   # Validator with nominators pools
   - name: validator-1
-    wallet: <address>
+    address: <address>
     pools:
       - <address>
       - <address>
 
   # Native validator (without pools and nominators)
   - name: validator-4
-    wallet: <address>
+    address: <address>
 
   # Validator with liquid controllers
   - name: validator-5
-    wallet: <address>
+    address: <address>
     controllers:
       - <address>
       - <address>

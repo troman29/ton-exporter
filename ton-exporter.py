@@ -24,7 +24,7 @@ REGISTRY.unregister(PROCESS_COLLECTOR)
 BALANCE = Gauge('address_balance', 'The balance of the address in the TON blockchain', ['address', 'name'])
 TIME_SINCE = Gauge('time_since_last_big_tx', 'Time since the last big transaction', ['address', 'name'])
 
-VALIDATOR_ACTIVE = Gauge('validator_active', 'Validator status (0 - inactive, 1 - active)', ['address', 'name'])
+VALIDATOR_STATUS = Gauge('validator_status', 'Validator status (0 - inactive, 1 - active)', ['address', 'name'])
 POOL_STATUS = Gauge('pool_state', 'Pool status (0 - inactive, 1 - pending, 2 - active)', ['address', 'name'])
 POOL_DEPOSIT = Gauge('pool_deposit', 'Total deposit of nominators', ['address', 'name'])
 CONTROLLER_STATUS = Gauge(
@@ -47,12 +47,15 @@ INTERVAL = 300
 
 # Declare config
 class Config(BaseModel):
-    class Validator(BaseModel):
+    class Wallet(BaseModel):
         name: str
-        wallet: str
+        address: str
+
+    class Validator(Wallet):
         pools: Optional[List[str]] = None
         controllers: Optional[List[str]] = None
 
+    wallets: List[Wallet]
     validators: List[Validator]
 
 
@@ -76,15 +79,31 @@ async def main():
     while True:
         try:
             print('\nCollecting metrics...')
-            active_validators = set(await get_active_validators())
-            await asyncio.gather(*map(collect_validator, config.validators))
+            if config.wallets:
+                await asyncio.gather(*map(collect_wallet, config.wallets))
+            if config.validators:
+                active_validators = set(await get_active_validators())
+                await asyncio.gather(*map(collect_validator, config.validators))
         except Exception:
             traceback.print_exc()
         await asyncio.sleep(INTERVAL)
 
 
+async def collect_wallet(wallet: Config.Wallet):
+    name = wallet.name
+    address = wallet.address
+    try:
+        # update balance
+        balance = round(await get_balance(address))
+        BALANCE.labels(address, name).set(balance)
+
+        print(f'{name}:', balance)
+    except Exception:
+        traceback.print_exc()
+
+
 async def collect_validator(validator: Config.Validator):
-    address = validator.wallet
+    address = validator.address
     name = validator.name
     pools = validator.pools or []
     controllers = validator.controllers or []
@@ -98,7 +117,7 @@ async def collect_validator(validator: Config.Validator):
         elif controllers:
             is_active = controllers[0] in active_validators or controllers[1] in active_validators
 
-        CONTROLLER_STATUS.labels(address, name).set(int(is_active))
+        VALIDATOR_STATUS.labels(address, name).set(int(is_active))
 
         # update balance
         balance = round(await get_balance(address))

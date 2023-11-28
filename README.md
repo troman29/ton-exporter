@@ -1,50 +1,52 @@
 # ton-exporter
 
-### Локальная установка
+### Local setup
 ```shell
-# Установим poetry
+# Install poetry
 curl -sSL https://install.python-poetry.org | python3 -
 
-# Установим зависимости (в проекте)
+# Install dependencies
 poetry install
 
-# Добавим переменные окружения
-export VALIDATOR_ADDRESSES="<name1>:<address1>"
-export POOL_ADDRESSES="<name1>:<address1>,<name2>:<address2>"
-export TON_X_API_KEY="<ключ из https://t.me/tonapibot>"
+# Configurate
+export TON_X_API_KEY="<token from https://t.me/tonapibot>"
+cp config.example.yaml config.yaml
 
-# Запустим сервис
+# Edit config
+vim config.yaml
+
+# Run
 poetry run python3 ton-exporter.py
 
-# Открываем в браузере http://localhost:9150 и видим данные :)
+# Open browser http://localhost:9150 and see data :)
 ```
 
-### Установка на linux сервер
+### Install on the linux server
 ```shell
-# Создадим пользователя
+# Create user
 sudo useradd -m prometheus
 sudo -i -u prometheus bash
 
-# Установим poetry
+# Install poetry
 curl -sSL https://install.python-poetry.org | python3 -
 
-# Установим зависимости (также будет создан venv)
+# Install dependencies
 git clone https://github.com/troman29/ton-exporter
 cd ton-exporter
 poetry install
 
-# Добавим сервис для автоматического запуска (от вашего юзера)
+# Setup systemd service
 sudo nano /etc/systemd/system/ton-exporter.service
-# Вставьте содержимое systemd/ton-exporter.service
+# Paste the contents of the file systemd/ton-exporter.service
 sudo systemctl daemon-reload
 
 sudo nano /etc/default/ton-exporter
-# Вставьте ваши переменные окружения
+# Paste env variables
 
 sudo systemctl enable ton-exporter
 sudo systemctl start ton-exporter
 
-# Проверим
+# Check
 sudo systemctl status ton-exporter
 curl http://localhost:9150
 ```

@@ -1,6 +1,7 @@
 # Custom
 .idea/
 config.yaml
+mytonctrl
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

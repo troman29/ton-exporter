@@ -1,0 +1,16 @@
+[Unit]
+Description=Validator Prometheus exporter
+Documentation=https://github.com/troman29/ton-exporter
+Requires=validator.service
+
+[Service]
+Restart=on-failure
+User=user
+EnvironmentFile=/etc/default/ton-exporter
+WorkingDirectory=/usr/src/ton-exporter
+ExecStart=/home/user/.local/bin/poetry run python3 validator-exporter.py
+TimeoutStopSec=20s
+SendSIGKILL=no
+
+[Install]
+WantedBy=multi-user.target

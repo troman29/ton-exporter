@@ -2,7 +2,7 @@
 import os
 import traceback
 from datetime import datetime as dt
-from typing import List, Optional
+from typing import List, Optional, Set
 
 import asyncio
 from aiohttp import ClientSession
@@ -61,7 +61,7 @@ class Config(BaseModel):
 
 config: Config
 session: ClientSession
-active_validators: set[str]
+active_validators: Set[str]
 
 
 async def main():

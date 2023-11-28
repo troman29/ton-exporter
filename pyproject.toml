@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "validator"
+name = "ton-exporter"
 version = "0.1.0"
 description = ""
 authors = ["developer <developer@example.com>"]

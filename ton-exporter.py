@@ -49,7 +49,7 @@ CONTROLLER_FULL_BALANCE = Gauge(
 HTTP_PORT = int(os.getenv('HTTP_PORT', 9150))
 TON_API_URL = 'https://toncenter.com/api/v2'
 ELECTIONS_API_URL = 'https://elections.toncenter.com'
-X_API_KEY = os.getenv('TON_X_API_KEY')
+TON_X_API_KEY = os.getenv('TON_X_API_KEY')
 CONFIG_PATH = os.getenv('CONFIG_PATH', 'config.yaml')
 
 MIN_ELECTOR_TX_AMOUNT = 300000
@@ -87,10 +87,11 @@ async def main():
         config_dict = load(file.read(), Loader=SafeLoader)
     config = Config(**config_dict)
 
-    timeout = ClientTimeout(total=5)
-    retry_options = RandomRetry(attempts=3)
-    session = ClientSession(timeout=timeout)
-    client = RetryClient(client_session=session, raise_for_status=False, retry_options=retry_options)
+    client = RetryClient(
+        client_session=ClientSession(timeout=ClientTimeout(total=5)),
+        retry_options=RandomRetry(attempts=3),
+        raise_for_status=False,
+    )
 
     while True:
         try:
@@ -213,7 +214,7 @@ async def collect_controller(name: str, address: str):
 async def get_active_validators():
     async with client.get(
         f'{ELECTIONS_API_URL}/getValidationCycles?limit=1&return_participants=true',
-        headers={'X-Api-Key': X_API_KEY},
+        headers={'X-Api-Key': TON_X_API_KEY},
     ) as response:
         raw_validators = (await response.json())[0]['cycle_info']['validators']
 
@@ -224,7 +225,7 @@ async def run_get_method(address: str, method: str, stack: Optional[List[str]]=N
     async with client.post(
         f'{TON_API_URL}/runGetMethod',
         json={'address': address, 'method': method, 'stack': stack or []},
-        headers={'X-Api-Key': X_API_KEY},
+        headers={'X-Api-Key': TON_X_API_KEY},
     ) as response:
         response.raise_for_status()
         return (await response.json())['result']['stack']
@@ -233,7 +234,7 @@ async def run_get_method(address: str, method: str, stack: Optional[List[str]]=N
 async def get_balance(address: str) -> float:
     async with client.get(
         f'{TON_API_URL}/getWalletInformation?address={address}',
-        headers={'X-Api-Key': X_API_KEY},
+        headers={'X-Api-Key': TON_X_API_KEY},
     ) as response:
         raw_balance = (await response.json())['result']['balance']
     return int(raw_balance) / (10**9)
@@ -242,7 +243,7 @@ async def get_balance(address: str) -> float:
 async def get_transactions(address: str):
     async with client.get(
         f'{TON_API_URL}/getTransactions?address={address}&limit={TRANSACTIONS_LIMIT}&archival=true',
-        headers={'X-Api-Key': X_API_KEY},
+        headers={'X-Api-Key': TON_X_API_KEY},
     ) as response:
         response.raise_for_status()
         raw_txs = (await response.json())['result']
@@ -266,8 +267,8 @@ def parse_raw_tx(raw_tx: dict):
 
 
 if __name__ == '__main__':
-    if not X_API_KEY:
-        print('The environment variable "X_API_KEY" is missing!')
+    if not TON_X_API_KEY:
+        print('The environment variable "TON_X_API_KEY" is missing!')
         exit(1)
     if not os.path.isfile(CONFIG_PATH):
         print(f'The file "{CONFIG_PATH}" is missing!')

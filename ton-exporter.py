@@ -54,6 +54,7 @@ CONFIG_PATH = os.getenv('CONFIG_PATH', 'config.yaml')
 MIN_ELECTOR_TX_AMOUNT = 300000
 TRANSACTIONS_LIMIT = 50
 INTERVAL = 60
+ERROR_INTERVAL = 5
 
 
 # Declare config
@@ -85,7 +86,7 @@ async def main():
         config_dict = load(file.read(), Loader=SafeLoader)
 
     config = Config(**config_dict)
-    session = ClientSession()
+    session = ClientSession(timeout=5)
 
     while True:
         try:
@@ -95,9 +96,10 @@ async def main():
             if config.validators:
                 active_validators = set(await get_active_validators())
                 await asyncio.gather(*map(collect_validator, config.validators))
+            await asyncio.sleep(INTERVAL)
         except Exception:
             traceback.print_exc()
-        await asyncio.sleep(INTERVAL)
+            await asyncio.sleep(ERROR_INTERVAL)
 
 
 async def collect_wallet(wallet: Config.Wallet):

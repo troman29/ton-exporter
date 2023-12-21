@@ -5,7 +5,7 @@ from datetime import datetime as dt
 from typing import List, Optional, Set
 
 import asyncio
-from aiohttp import ClientSession
+from aiohttp import ClientSession, TCPConnector, ClientTimeout
 from pydantic import BaseModel
 from yaml import load, SafeLoader
 from prometheus_client import (
@@ -82,11 +82,13 @@ async def main():
     global active_validators
 
     # Parse config
-    with open('config.yaml') as file:
+    with open(CONFIG_PATH) as file:
         config_dict = load(file.read(), Loader=SafeLoader)
-
     config = Config(**config_dict)
-    session = ClientSession(read_timeout=5, conn_timeout=5)
+
+    timeout = ClientTimeout(total=5)
+    connector = TCPConnector(limit=1)
+    session = ClientSession(timeout=timeout, connector=connector)
 
     while True:
         try:

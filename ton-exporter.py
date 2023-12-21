@@ -5,7 +5,7 @@ from datetime import datetime as dt
 from typing import List, Optional, Set
 
 import asyncio
-from aiohttp import ClientSession, TCPConnector, ClientTimeout
+from aiohttp import ClientSession, ClientTimeout
 from aiohttp_retry import RetryClient, RandomRetry
 from pydantic import BaseModel
 from yaml import load, SafeLoader

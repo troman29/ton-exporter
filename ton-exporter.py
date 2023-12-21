@@ -17,6 +17,10 @@ from prometheus_client import (
     PROCESS_COLLECTOR,
 )
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # Setup metrics
 REGISTRY.unregister(GC_COLLECTOR)
 REGISTRY.unregister(PLATFORM_COLLECTOR)
@@ -33,12 +37,19 @@ CONTROLLER_STATUS = Gauge(
     ' 3 - FUNDS_STAKEN, 4 - SENT_RECOVER_REQUEST, 5 - INSOLVENT)',
     ['address', 'name']
 )
+CONTROLLER_DEPOSIT = Gauge('controller_deposit', 'Controller deposit', ['address', 'name'])
+CONTROLLER_FULL_BALANCE = Gauge(
+    'controller_full_balance',
+    'Controller full balance (deposit + balance)',
+    ['address', 'name']
+)
 
 # Settings
 HTTP_PORT = int(os.getenv('HTTP_PORT', 9150))
 TON_API_URL = 'https://toncenter.com/api/v2'
 ELECTIONS_API_URL = 'https://elections.toncenter.com'
 X_API_KEY = os.getenv('TON_X_API_KEY')
+CONFIG_PATH = os.getenv('CONFIG_PATH', 'config.yaml')
 
 MIN_ELECTOR_TX_AMOUNT = 300000
 TRANSACTIONS_LIMIT = 50
@@ -176,7 +187,19 @@ async def collect_controller(name: str, address: str):
         stack = await run_get_method(address, 'get_validator_controller_data')
         state = int(stack[0][1], base=16)
         CONTROLLER_STATUS.labels(address, name).set(state)
-        print(f'{name}:', state)
+
+        stake_amount_sent = int(stack[3][1], base=16)
+        borrowed_amount = int(stack[9][1], base=16)
+        deposit = (stake_amount_sent - borrowed_amount) / (10 ** 9)
+        CONTROLLER_DEPOSIT.labels(address, name).set(deposit)
+
+        balance = await get_balance(address)
+        BALANCE.labels(address, name).set(balance)
+
+        full_balance = deposit + balance
+        CONTROLLER_FULL_BALANCE.labels(address, name).set(full_balance)
+
+        print(f'{name}:', state, balance, deposit, full_balance)
     except Exception:
         traceback.print_exc()
 
@@ -202,7 +225,7 @@ async def run_get_method(address: str, method: str, stack: Optional[List[str]]=N
         return (await response.json())['result']['stack']
 
 
-async def get_balance(address: str):
+async def get_balance(address: str) -> float:
     global session
     async with session.get(
         f'{TON_API_URL}/getWalletInformation?address={address}',
@@ -240,6 +263,13 @@ def parse_raw_tx(raw_tx: dict):
 
 
 if __name__ == '__main__':
+    if not X_API_KEY:
+        print('The environment variable "X_API_KEY" is missing!')
+        exit(1)
+    if not os.path.isfile(CONFIG_PATH):
+        print(f'The file "{CONFIG_PATH}" is missing!')
+        exit(1)
+
     start_http_server(HTTP_PORT)
 
     # Collect metrics in the cycle

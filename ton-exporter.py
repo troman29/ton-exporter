@@ -86,7 +86,7 @@ async def main():
         config_dict = load(file.read(), Loader=SafeLoader)
 
     config = Config(**config_dict)
-    session = ClientSession(timeout=5)
+    session = ClientSession(read_timeout=5, conn_timeout=5)
 
     while True:
         try:

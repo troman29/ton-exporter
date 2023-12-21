@@ -6,6 +6,7 @@ from typing import List, Optional, Set
 
 import asyncio
 from aiohttp import ClientSession, TCPConnector, ClientTimeout
+from aiohttp_retry import RetryClient, RandomRetry
 from pydantic import BaseModel
 from yaml import load, SafeLoader
 from prometheus_client import (
@@ -72,13 +73,13 @@ class Config(BaseModel):
 
 
 config: Config
-session: ClientSession
+client: RetryClient
 active_validators: Set[str]
 
 
 async def main():
     global config
-    global session
+    global client
     global active_validators
 
     # Parse config
@@ -87,8 +88,9 @@ async def main():
     config = Config(**config_dict)
 
     timeout = ClientTimeout(total=5)
-    connector = TCPConnector(limit=1)
-    session = ClientSession(timeout=timeout, connector=connector)
+    retry_options = RandomRetry(attempts=3)
+    session = ClientSession(timeout=timeout)
+    client = RetryClient(client_session=session, raise_for_status=False, retry_options=retry_options)
 
     while True:
         try:
@@ -155,7 +157,7 @@ async def collect_validator(validator: Config.Validator):
 
 
 async def collect_pool(name: str, address: str):
-    global session
+    global client
     try:
         # Get transactions
         txs = await get_transactions(address)
@@ -209,7 +211,7 @@ async def collect_controller(name: str, address: str):
 
 
 async def get_active_validators():
-    async with session.get(
+    async with client.get(
         f'{ELECTIONS_API_URL}/getValidationCycles?limit=1&return_participants=true',
         headers={'X-Api-Key': X_API_KEY},
     ) as response:
@@ -219,8 +221,7 @@ async def get_active_validators():
 
 
 async def run_get_method(address: str, method: str, stack: Optional[List[str]]=None) -> List[str]:
-    global session
-    async with session.post(
+    async with client.post(
         f'{TON_API_URL}/runGetMethod',
         json={'address': address, 'method': method, 'stack': stack or []},
         headers={'X-Api-Key': X_API_KEY},
@@ -230,8 +231,7 @@ async def run_get_method(address: str, method: str, stack: Optional[List[str]]=N
 
 
 async def get_balance(address: str) -> float:
-    global session
-    async with session.get(
+    async with client.get(
         f'{TON_API_URL}/getWalletInformation?address={address}',
         headers={'X-Api-Key': X_API_KEY},
     ) as response:
@@ -240,8 +240,7 @@ async def get_balance(address: str) -> float:
 
 
 async def get_transactions(address: str):
-    global session
-    async with session.get(
+    async with client.get(
         f'{TON_API_URL}/getTransactions?address={address}&limit={TRANSACTIONS_LIMIT}&archival=true',
         headers={'X-Api-Key': X_API_KEY},
     ) as response:

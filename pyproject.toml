@@ -12,6 +12,7 @@ aiohttp = {extras = ["speedups"], version = "^3.8.3"}
 pyyaml = "^6.0.1"
 pydantic = "^2.5.2"
 python-dotenv = "^1.0.0"
+aiohttp-retry = "^2.8.3"
 
 
 [build-system]

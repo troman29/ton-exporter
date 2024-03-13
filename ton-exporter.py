@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import logging
 import os
 import traceback
 from datetime import datetime as dt
@@ -88,10 +89,17 @@ async def main():
         config_dict = load(file.read(), Loader=SafeLoader)
     config = Config(**config_dict)
 
+    logger = logging.getLogger("aiohttp_retry")
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler = logging.StreamHandler()
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
     client = RetryClient(
         client_session=ClientSession(timeout=ClientTimeout(total=5)),
         retry_options=RandomRetry(attempts=3),
         raise_for_status=False,
+        logger=logger,
     )
 
     while True:

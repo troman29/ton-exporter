@@ -67,6 +67,7 @@ class Config(BaseModel):
     class Validator(Wallet):
         pools: Optional[List[str]] = None
         controllers: Optional[List[str]] = None
+        single_pool: Optional[str] = None
 
     wallets: List[Wallet]
     validators: List[Validator]
@@ -125,6 +126,7 @@ async def collect_validator(validator: Config.Validator):
     name = validator.name
     pools = validator.pools or []
     controllers = validator.controllers or []
+    single_pool = validator.single_pool
 
     try:
         # update status
@@ -134,6 +136,8 @@ async def collect_validator(validator: Config.Validator):
             is_active = pools[0] in active_validators or pools[1] in active_validators
         elif controllers:
             is_active = controllers[0] in active_validators or controllers[1] in active_validators
+        elif single_pool:
+            is_active = single_pool in active_validators
 
         VALIDATOR_STATUS.labels(address, name).set(int(is_active))
 
@@ -156,6 +160,9 @@ async def collect_validator(validator: Config.Validator):
         name = f'{validator_name}-controller{i + 1}'
         await collect_controller(name, controller)
 
+    if single_pool:
+        name = f'{validator_name}-single-pool'
+        await collect_single_pool(name, single_pool)
 
 async def collect_pool(name: str, address: str):
     global client
@@ -209,6 +216,16 @@ async def collect_controller(name: str, address: str):
         print(f'{name}:', state, balance, deposit, full_balance)
     except Exception:
         traceback.print_exc()
+
+
+async def collect_single_pool(name: str, address: str):
+    global client
+    try:
+        # TODO Implement
+        print(f'{name}:', 'not implemented')
+    except Exception:
+        traceback.print_exc()
+    await asyncio.sleep(0.2)
 
 
 async def get_active_validators():

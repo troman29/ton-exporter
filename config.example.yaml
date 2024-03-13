@@ -20,3 +20,8 @@ validators:
     controllers:
       - <address>
       - <address>
+
+  # Validator with single pool
+  - name: validator-6
+    address: <address>
+    single_pool: <address>

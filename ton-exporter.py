@@ -164,6 +164,7 @@ async def collect_validator(validator: Config.Validator):
         name = f'{validator_name}-single-pool'
         await collect_single_pool(name, single_pool)
 
+
 async def collect_pool(name: str, address: str):
     global client
     try:

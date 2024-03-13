@@ -15,6 +15,7 @@ python-dotenv = "^1.0.0"
 aiohttp-retry = "^2.8.3"
 psutil = "^5.9.8"
 requests = "^2.31.0"
+fastcrc = "^0.3.0"
 
 
 [build-system]

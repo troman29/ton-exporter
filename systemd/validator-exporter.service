@@ -6,7 +6,6 @@ Requires=validator.service
 [Service]
 Restart=on-failure
 User=user
-EnvironmentFile=/etc/default/ton-exporter
 WorkingDirectory=/usr/src/ton-exporter
 ExecStart=/usr/local/bin/poetry run python3 validator-exporter.py
 TimeoutStopSec=20s

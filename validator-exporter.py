@@ -16,9 +16,11 @@ from prometheus_client import (
 
 sys.path.append(os.path.join(sys.path[0], '../mytonctrl'))
 
+from mypylib.mypylib import MyPyClass
 from mytoncore import MyTonCore
 
-ton = MyTonCore()
+mytoncore_local = MyPyClass('../mytonctrl/mytoncore.py')
+ton = MyTonCore(mytoncore_local)
 
 # Setup metrics
 REGISTRY.unregister(GC_COLLECTOR)

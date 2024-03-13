@@ -266,6 +266,7 @@ async def collect_liquid_pool(address: str):
     current_round_borrowed = pool_data['current_round_borrowers']['borrowed'] / (10**9)
     LIQUID_POOL_BORROWED.labels(address, 'previous').set(prev_round_borrowed)
     LIQUID_POOL_BORROWED.labels(address, 'current').set(current_round_borrowed)
+    BALANCE.labels(address, 'liquid_pool').set(balance)
     print('liquid_pool:', prev_round_borrowed, current_round_borrowed, balance)
 
 

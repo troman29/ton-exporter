@@ -89,15 +89,20 @@ async def main():
         config_dict = load(file.read(), Loader=SafeLoader)
     config = Config(**config_dict)
 
+    # TODO Remove
     logger = logging.getLogger("aiohttp_retry")
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     handler = logging.StreamHandler()
+    handler.setLevel(logging.DEBUG)
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
     client = RetryClient(
         client_session=ClientSession(timeout=ClientTimeout(total=5)),
-        retry_options=RandomRetry(attempts=3),
+        retry_options=RandomRetry(
+            attempts=5,
+            exceptions=[asyncio.exceptions.TimeoutError],
+        ),
         raise_for_status=False,
         logger=logger,
     )

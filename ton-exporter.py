@@ -88,25 +88,24 @@ async def main():
         config_dict = load(file.read(), Loader=SafeLoader)
     config = Config(**config_dict)
 
-    while True:
-        async with ClientSession(timeout=ClientTimeout(total=10)) as session:
-            client = RetryClient(
-                client_session=session,
-                retry_options=RandomRetry(attempts=3),
-                raise_for_status=False,
-            )
+    client = RetryClient(
+        client_session=ClientSession(timeout=ClientTimeout(total=5)),
+        retry_options=RandomRetry(attempts=3),
+        raise_for_status=False,
+    )
 
-            try:
-                print('\nCollecting metrics...')
-                if config.wallets:
-                    await asyncio.gather(*map(collect_wallet, config.wallets))
-                if config.validators:
-                    active_validators = set(await get_active_validators())
-                    await asyncio.gather(*map(collect_validator, config.validators))
-                await asyncio.sleep(INTERVAL)
-            except Exception:
-                traceback.print_exc()
-                await asyncio.sleep(ERROR_INTERVAL)
+    while True:
+        try:
+            print('\nCollecting metrics...')
+            if config.wallets:
+                await asyncio.gather(*map(collect_wallet, config.wallets))
+            if config.validators:
+                active_validators = set(await get_active_validators())
+                await asyncio.gather(*map(collect_validator, config.validators))
+            await asyncio.sleep(INTERVAL)
+        except Exception:
+            traceback.print_exc()
+            await asyncio.sleep(ERROR_INTERVAL)
 
 
 async def collect_wallet(wallet: Config.Wallet):

@@ -66,7 +66,7 @@ cd ton-exporter
 poetry install
 
 # Setup systemd service
-sudo nano /etc/systemd/system/ton-validator.service
+sudo nano /etc/systemd/system/validator-exporter.service
 # Paste the contents of the file systemd/validator-exporter.service
 sudo systemctl daemon-reload
 

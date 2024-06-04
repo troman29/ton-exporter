@@ -1,6 +1,7 @@
 [Unit]
 Description=Validator Prometheus exporter
 Documentation=https://github.com/troman29/ton-exporter
+After=validator.service
 Requires=validator.service
 
 [Service]

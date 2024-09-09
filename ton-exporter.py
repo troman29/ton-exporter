@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
+import logging
 import os
 import traceback
 from datetime import datetime as dt
 from typing import List, Optional, Set
 
 import asyncio
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientTimeout
+from aiohttp_retry import RetryClient, RandomRetry
 from pydantic import BaseModel
 from yaml import load, SafeLoader
 from prometheus_client import (
@@ -48,7 +50,7 @@ CONTROLLER_FULL_BALANCE = Gauge(
 HTTP_PORT = int(os.getenv('HTTP_PORT', 9150))
 TON_API_URL = 'https://toncenter.com/api/v2'
 ELECTIONS_API_URL = 'https://elections.toncenter.com'
-X_API_KEY = os.getenv('TON_X_API_KEY')
+TON_X_API_KEY = os.getenv('TON_X_API_KEY')
 CONFIG_PATH = os.getenv('CONFIG_PATH', 'config.yaml')
 
 MIN_ELECTOR_TX_AMOUNT = 300000
@@ -66,27 +68,44 @@ class Config(BaseModel):
     class Validator(Wallet):
         pools: Optional[List[str]] = None
         controllers: Optional[List[str]] = None
+        single_pool: Optional[str] = None
 
     wallets: List[Wallet]
     validators: List[Validator]
 
 
 config: Config
-session: ClientSession
+client: RetryClient
 active_validators: Set[str]
 
 
 async def main():
     global config
-    global session
+    global client
     global active_validators
 
     # Parse config
-    with open('config.yaml') as file:
+    with open(CONFIG_PATH) as file:
         config_dict = load(file.read(), Loader=SafeLoader)
-
     config = Config(**config_dict)
-    session = ClientSession(read_timeout=5, conn_timeout=5)
+
+    # TODO Remove
+    logger = logging.getLogger("aiohttp_retry")
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    handler = logging.StreamHandler()
+    handler.setLevel(logging.DEBUG)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+
+    client = RetryClient(
+        client_session=ClientSession(timeout=ClientTimeout(total=5)),
+        retry_options=RandomRetry(
+            attempts=5,
+            exceptions=[asyncio.exceptions.TimeoutError],
+        ),
+        raise_for_status=False,
+        logger=logger,
+    )
 
     while True:
         try:
@@ -120,6 +139,7 @@ async def collect_validator(validator: Config.Validator):
     name = validator.name
     pools = validator.pools or []
     controllers = validator.controllers or []
+    single_pool = validator.single_pool
 
     try:
         # update status
@@ -129,6 +149,8 @@ async def collect_validator(validator: Config.Validator):
             is_active = pools[0] in active_validators or pools[1] in active_validators
         elif controllers:
             is_active = controllers[0] in active_validators or controllers[1] in active_validators
+        elif single_pool:
+            is_active = single_pool in active_validators
 
         VALIDATOR_STATUS.labels(address, name).set(int(is_active))
 
@@ -151,9 +173,13 @@ async def collect_validator(validator: Config.Validator):
         name = f'{validator_name}-controller{i + 1}'
         await collect_controller(name, controller)
 
+    if single_pool:
+        name = f'{validator_name}-single-pool'
+        await collect_single_pool(name, single_pool)
+
 
 async def collect_pool(name: str, address: str):
-    global session
+    global client
     try:
         # Get transactions
         txs = await get_transactions(address)
@@ -206,10 +232,20 @@ async def collect_controller(name: str, address: str):
         traceback.print_exc()
 
 
+async def collect_single_pool(name: str, address: str):
+    global client
+    try:
+        # TODO Implement
+        print(f'{name}:', 'not implemented')
+    except Exception:
+        traceback.print_exc()
+    await asyncio.sleep(0.2)
+
+
 async def get_active_validators():
-    async with session.get(
+    async with client.get(
         f'{ELECTIONS_API_URL}/getValidationCycles?limit=1&return_participants=true',
-        headers={'X-Api-Key': X_API_KEY},
+        headers={'X-Api-Key': TON_X_API_KEY},
     ) as response:
         raw_validators = (await response.json())[0]['cycle_info']['validators']
 
@@ -217,31 +253,28 @@ async def get_active_validators():
 
 
 async def run_get_method(address: str, method: str, stack: Optional[List[str]]=None) -> List[str]:
-    global session
-    async with session.post(
+    async with client.post(
         f'{TON_API_URL}/runGetMethod',
         json={'address': address, 'method': method, 'stack': stack or []},
-        headers={'X-Api-Key': X_API_KEY},
+        headers={'X-Api-Key': TON_X_API_KEY},
     ) as response:
         response.raise_for_status()
         return (await response.json())['result']['stack']
 
 
 async def get_balance(address: str) -> float:
-    global session
-    async with session.get(
+    async with client.get(
         f'{TON_API_URL}/getWalletInformation?address={address}',
-        headers={'X-Api-Key': X_API_KEY},
+        headers={'X-Api-Key': TON_X_API_KEY},
     ) as response:
         raw_balance = (await response.json())['result']['balance']
     return int(raw_balance) / (10**9)
 
 
 async def get_transactions(address: str):
-    global session
-    async with session.get(
+    async with client.get(
         f'{TON_API_URL}/getTransactions?address={address}&limit={TRANSACTIONS_LIMIT}&archival=true',
-        headers={'X-Api-Key': X_API_KEY},
+        headers={'X-Api-Key': TON_X_API_KEY},
     ) as response:
         response.raise_for_status()
         raw_txs = (await response.json())['result']
@@ -265,8 +298,8 @@ def parse_raw_tx(raw_tx: dict):
 
 
 if __name__ == '__main__':
-    if not X_API_KEY:
-        print('The environment variable "X_API_KEY" is missing!')
+    if not TON_X_API_KEY:
+        print('The environment variable "TON_X_API_KEY" is missing!')
         exit(1)
     if not os.path.isfile(CONFIG_PATH):
         print(f'The file "{CONFIG_PATH}" is missing!')

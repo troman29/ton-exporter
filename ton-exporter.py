@@ -45,6 +45,7 @@ CONTROLLER_FULL_BALANCE = Gauge(
     'Controller full balance (deposit + balance)',
     ['address', 'name']
 )
+LIQUID_POOL_BORROWED = Gauge('liquid_pool_borrowed', 'Liquid pool borrowed', ['address', 'round'])
 
 # Settings
 HTTP_PORT = int(os.getenv('HTTP_PORT', 9150))
@@ -72,6 +73,7 @@ class Config(BaseModel):
 
     wallets: List[Wallet]
     validators: List[Validator]
+    liquid_pool: Optional[str] = None
 
 
 config: Config
@@ -115,6 +117,8 @@ async def main():
             if config.validators:
                 active_validators = set(await get_active_validators())
                 await asyncio.gather(*map(collect_validator, config.validators))
+            if config.liquid_pool:
+                await collect_liquid_pool(config.liquid_pool)
             await asyncio.sleep(INTERVAL)
         except Exception:
             traceback.print_exc()
@@ -250,6 +254,20 @@ async def get_active_validators():
         raw_validators = (await response.json())[0]['cycle_info']['validators']
 
     return [x['wallet_address'] for x in raw_validators]
+
+
+async def collect_liquid_pool(address: str):
+    balance = await get_balance(address)
+    async with client.get(
+        f'https://tonapi.io/v2/blockchain/accounts/{address}/methods/get_pool_full_data',
+    ) as response:
+        pool_data = (await response.json())['decoded']
+    prev_round_borrowed = pool_data['prev_round_borrowers']['borrowed'] / (10**9)
+    current_round_borrowed = pool_data['current_round_borrowers']['borrowed'] / (10**9)
+    LIQUID_POOL_BORROWED.labels(address, 'previous').set(prev_round_borrowed)
+    LIQUID_POOL_BORROWED.labels(address, 'current').set(current_round_borrowed)
+    BALANCE.labels(address, 'liquid_pool').set(balance)
+    print('liquid_pool:', prev_round_borrowed, current_round_borrowed, balance)
 
 
 async def run_get_method(address: str, method: str, stack: Optional[List[str]]=None) -> List[str]:

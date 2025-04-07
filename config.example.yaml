@@ -2,6 +2,9 @@ wallets:
   - name: wallet-1
     address: <address>
 
+# optional
+liquid_pool: null
+
 validators:
   # Validator with nominators pools
   - name: validator-1
